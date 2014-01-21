@@ -19,11 +19,12 @@ from glob import glob
 from os.path import abspath, exists, isdir, isfile, split
 from optparse import (Option, OptionParser, OptionGroup, OptionValueError,
                       OptionError)
-from pyqi.core.interface import (Interface, InterfaceInputOption, 
+from pyqi.core.interface import (Interface, InterfaceInputOption,
                                  InterfaceOutputOption, InterfaceUsageExample)
 from pyqi.core.factory import general_factory
 from pyqi.core.exception import IncompetentDeveloperError
 from pyqi.core.command import Parameter
+
 
 class OptparseResult(InterfaceOutputOption):
     def __init__(self, **kwargs):
@@ -32,10 +33,12 @@ class OptparseResult(InterfaceOutputOption):
     def _validate_option(self):
         pass
 
+
 class OptparseOption(InterfaceInputOption):
     """An augmented option that expands a ``CommandIn`` into an Option"""
 
-    def __init__(self, **kwargs):
+    def __init__(self, Choices=None, **kwargs):
+        self.choices = Choices
         super(OptparseOption, self).__init__(**kwargs)
 
     def _validate_option(self):
@@ -50,6 +53,11 @@ class OptparseOption(InterfaceInputOption):
             return '-%s/--%s' % (self.ShortName, self.Name)
 
     def getOptparseOption(self):
+        # Check if the option is a choice or multiple_choice, so we can assign
+        # the list of values to the correct parameter
+        choices = self.choices if self.Type == "choice" else None
+        mchoices = self.choices if self.Type == "multiple_choice" else None
+
         if self.Required:
             # If the option doesn't already end with [REQUIRED], add it.
             help_text = self.Help
@@ -59,11 +67,13 @@ class OptparseOption(InterfaceInputOption):
 
             if self.ShortName is None:
                 option = PyqiOption('--' + self.Name, type=self.Type,
-                                    action=self.Action, help=help_text)
+                                    action=self.Action, help=help_text,
+                                    choices=choices, mchoices=mchoices)
             else:
                 option = PyqiOption('-' + self.ShortName,
                                     '--' + self.Name, type=self.Type,
-                                    action=self.Action, help=help_text)
+                                    action=self.Action, help=help_text,
+                                    choices=choices, mchoices=mchoices)
         else:
             if self.DefaultDescription is None:
                 help_text = '%s [default: %%default]' % self.Help
@@ -74,13 +84,16 @@ class OptparseOption(InterfaceInputOption):
             if self.ShortName is None:
                 option = PyqiOption('--' + self.Name, type=self.Type,
                                     action=self.Action, help=help_text,
+                                    choices=choices, mchoices=mchoices,
                                     default=self.Default)
             else:
                 option = PyqiOption('-' + self.ShortName,
                                     '--' + self.Name, type=self.Type,
                                     action=self.Action, help=help_text,
+                                    choices=choices, mchoices=mchoices,
                                     default=self.Default)
         return option
+
 
 class OptparseUsageExample(InterfaceUsageExample):
     """Provide structure to a usage example"""
@@ -92,13 +105,14 @@ class OptparseUsageExample(InterfaceUsageExample):
         if self.Ex is None:
             raise IncompetentDeveloperError("Must define Ex")
 
+
 class OptparseInterface(Interface):
     """A command line interface"""
     DisallowPositionalArguments = True
-    HelpOnNoArguments = True 
+    HelpOnNoArguments = True
     OptionalInputLine = '[] indicates optional input (order unimportant)'
     RequiredInputLine = '{} indicates required input (order unimportant)'
-    
+
     def __init__(self, **kwargs):
         super(OptparseInterface, self).__init__(**kwargs)
 
@@ -164,8 +178,9 @@ class OptparseInterface(Interface):
         # an error.
         if self.DisallowPositionalArguments and len(args) != 0:
             parser.error("Positional argument detected: %s\n" % str(args[0]) +
-             " Be sure all parameters are identified by their option name.\n" +
-             " (e.g.: include the '-i' in '-i INPUT_DIR')")
+                         " Be sure all parameters are identified by their " +
+                         "option name.\n (e.g.: include the '-i' in " +
+                         "'-i INPUT_DIR')")
 
         # Test that all required options were provided.
         if required_opts:
@@ -186,13 +201,13 @@ class OptparseInterface(Interface):
             if option.Parameter is not None:
                 param_name = option.getParameterName()
                 optparse_clean_name = \
-                        self._get_optparse_clean_name(option.Name)
+                    self._get_optparse_clean_name(option.Name)
 
                 if option.Handler is None:
                     value = self._optparse_input[optparse_clean_name]
                 else:
                     value = option.Handler(
-                            self._optparse_input[optparse_clean_name])
+                        self._optparse_input[optparse_clean_name])
 
                 cmd_input_kwargs[param_name] = value
 
@@ -201,7 +216,7 @@ class OptparseInterface(Interface):
     def _build_usage_lines(self, required_options):
         """ Build the usage string from components """
         line1 = 'usage: %prog [options] ' + \
-                '{%s}' % ' '.join(['%s %s' % (str(rp),rp.Name.upper())
+                '{%s}' % ' '.join(['%s %s' % (str(rp), rp.Name.upper())
                                    for rp in required_options])
 
         formatted_usage_examples = []
@@ -211,22 +226,22 @@ class OptparseInterface(Interface):
             example = usage_example.Ex.strip()
 
             if short_description:
-                formatted_usage_examples.append('%s: %s\n %s' % 
+                formatted_usage_examples.append('%s: %s\n %s' %
                                                 (short_description,
                                                  long_description, example))
             else:
                 formatted_usage_examples.append('%s\n %s' %
-                                                (long_description,example))
+                                                (long_description, example))
 
         formatted_usage_examples = '\n\n'.join(formatted_usage_examples)
 
         lines = (line1,
-                 '', # Blank line
+                 '',  # Blank line
                  self.OptionalInputLine,
                  self.RequiredInputLine,
-                 '', # Blank line
+                 '',  # Blank line
                  self.CmdInstance.LongDescription,
-                 '', # Blank line
+                 '',  # Blank line
                  'Example usage: ',
                  'Print help message and exit',
                  ' %prog -h\n',
@@ -240,15 +255,15 @@ class OptparseInterface(Interface):
 
         for output in self._get_outputs():
             rk = output.Name
-        
+
             if output.InputName is None:
                 handled_results[rk] = output.Handler(rk, results[rk])
             else:
                 optparse_clean_name = \
-                        self._get_optparse_clean_name(output.InputName)
+                    self._get_optparse_clean_name(output.InputName)
                 opt_value = self._optparse_input[optparse_clean_name]
                 handled_results[rk] = output.Handler(rk, results[rk],
-                                                           opt_value)
+                                                     opt_value)
 
         return handled_results
 
@@ -256,19 +271,21 @@ class OptparseInterface(Interface):
         # optparse converts dashes to underscores in long option names.
         return name.replace('-', '_')
 
+
 def optparse_factory(command_constructor, usage_examples, inputs, outputs,
                      version):
     """Optparse command line interface factory
-    
+
     command_constructor - a subclass of ``Command``
     usage_examples - usage examples for using ``command_constructor`` via a
         command line interface.
     inputs  - config ``inputs`` or a list of ``OptparseOptions``
-    outputs - config ``outputs`` or a list of ``OptparseResults`` 
+    outputs - config ``outputs`` or a list of ``OptparseResults``
     version - config ``__version__`` (a version string)
     """
     return general_factory(command_constructor, usage_examples, inputs,
                            outputs, version, OptparseInterface)
+
 
 def optparse_main(interface_object, local_argv):
     """Construct and execute an interface object"""
@@ -289,15 +306,18 @@ def optparse_main(interface_object, local_argv):
 # TODO: this code needs to be refactored to better fit the pyqi framework.
 # Should probably get added to the OptparseInterface class.
 
+
 def check_existing_filepath(option, opt, value):
     if not exists(value):
         raise OptionValueError(
             "option %s: file does not exist: %r" % (opt, value))
     elif not isfile(value):
         raise OptionValueError(
-            "option %s: not a regular file (can't be a directory!): %r" % (opt, value))
+            "option %s: not a regular file (can't be a directory!): %r" %
+            (opt, value))
     else:
         return value
+
 
 def check_existing_filepaths(option, opt, value):
     paths = []
@@ -305,15 +325,16 @@ def check_existing_filepaths(option, opt, value):
         fps = glob(v)
         if len(fps) == 0:
             raise OptionValueError(
-             "No filepaths match pattern/name '%s'. "
-             "All patterns must be matched at least once." % v)
+                "No filepaths match pattern/name '%s'. "
+                "All patterns must be matched at least once." % v)
         else:
             paths.extend(fps)
     values = []
     for v in paths:
-        check_existing_filepath(option,opt,v)
+        check_existing_filepath(option, opt, v)
         values.append(v)
     return values
+
 
 def check_existing_dirpath(option, opt, value):
     if not exists(value):
@@ -324,6 +345,7 @@ def check_existing_dirpath(option, opt, value):
             "option %s: not a directory (can't be a file!): %r" % (opt, value))
     else:
         return value
+
 
 def check_existing_dirpaths(option, opt, value):
     paths = []
@@ -341,30 +363,35 @@ def check_existing_dirpaths(option, opt, value):
         values.append(v)
     return values
 
+
 def check_new_filepath(option, opt, value):
     if exists(value):
         if isdir(value):
             raise OptionValueError(
-                "option %s: output file exists and it is a directory: %r" %(opt,
-                    value))
+                "option %s: output file exists and it is a directory: %r" %
+                (opt, value))
     return value
-        
+
+
 def check_new_dirpath(option, opt, value):
     if exists(value):
         if isfile(value):
             raise OptionValueError(
-                "option %s: output directory exists and it is a file: %r" %(opt,
-                    value))
+                "option %s: output directory exists and it is a file: %r" %
+                (opt, value))
     return value
-    
+
+
 def check_existing_path(option, opt, value):
     if not exists(value):
         raise OptionValueError(
             "option %s: path does not exist: %r" % (opt, value))
     return value
-    
+
+
 def check_new_path(option, opt, value):
     return value
+
 
 def check_multiple_choice(option, opt, value):
     values = value.split(option.split_char)
@@ -376,6 +403,7 @@ def check_multiple_choice(option, opt, value):
                 % (opt, v, choices))
     return values
 
+
 def check_blast_db(option, opt, value):
     db_dir, db_name = split(abspath(value))
     if not exists(db_dir):
@@ -386,8 +414,9 @@ def check_blast_db(option, opt, value):
             "option %s: not a directory: %r" % (opt, db_dir))
     return value
 
+
 class PyqiOption(Option):
-    ATTRS = Option.ATTRS + ['mchoices','split_char']
+    ATTRS = Option.ATTRS + ['mchoices', 'split_char']
 
     TYPES = Option.TYPES + ("existing_path",
                             "new_path",
@@ -411,7 +440,7 @@ class PyqiOption(Option):
     # for cases where the user passes one or more existing files
     # as a comma-separated list - paths are returned as a list
     TYPE_CHECKER["existing_filepaths"] = check_existing_filepaths
-    # for cases where the user is passing a new path to be 
+    # for cases where the user is passing a new path to be
     # create (e.g., an output file)
     TYPE_CHECKER["new_filepath"] = check_new_filepath
     # for cases where the user is passing an existing directory
@@ -420,7 +449,7 @@ class PyqiOption(Option):
     # for cases where the user passes one or more existing directories
     # as a comma-separated list - paths are returned as a list
     TYPE_CHECKER["existing_dirpaths"] = check_existing_dirpaths
-    # for cases where the user is passing a new directory to be 
+    # for cases where the user is passing a new directory to be
     # create (e.g., an output dir which will contain many result files)
     TYPE_CHECKER["new_dirpath"] = check_new_dirpath
     # for cases where the user is passing one or more values
@@ -435,7 +464,8 @@ class PyqiOption(Option):
         if self.type == "multiple_choice":
             if self.mchoices is None:
                 raise OptionError(
-                    "must supply a list of mchoices for type '%s'" % self.type, self)
+                    "must supply a list of mchoices for type '%s'" % self.type,
+                    self)
             elif type(self.mchoices) not in (types.TupleType, types.ListType):
                 raise OptionError(
                     "choices must be a list of strings ('%s' supplied)"
