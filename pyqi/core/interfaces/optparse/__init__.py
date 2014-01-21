@@ -242,7 +242,7 @@ class OptparseInterface(Interface):
                  '',  # Blank line
                  self.CmdInstance.LongDescription,
                  '',  # Blank line
-                 'Example usage: ',
+                 'Example usage:',
                  'Print help message and exit',
                  ' %prog -h\n',
                  formatted_usage_examples)

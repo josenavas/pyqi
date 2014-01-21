@@ -33,9 +33,11 @@ from tempfile import mkstemp, mkdtemp
 from os import remove, rmdir
 from os.path import commonprefix
 
+
 class OptparseResultTests(TestCase):
     # Nothing to test yet
     pass
+
 
 class OptparseOptionTests(TestCase):
     def setUp(self):
@@ -45,7 +47,7 @@ class OptparseOptionTests(TestCase):
         self.opt1 = OptparseOption(Parameter=p, Type=int)
 
         # Without associated parameter.
-        self.opt2 = OptparseOption(Parameter=None, Type=int, Handler=None, 
+        self.opt2 = OptparseOption(Parameter=None, Type=int, Handler=None,
                                    ShortName='n',
                                    Name='number', Required=False,
                                    Help='help!!!')
@@ -68,6 +70,7 @@ class OptparseOptionTests(TestCase):
         obs = str(self.opt2)
         self.assertEqual(obs, exp)
 
+
 class OptparseUsageExampleTests(TestCase):
     def test_init(self):
         obj = OptparseUsageExample(ShortDesc='a', LongDesc='b', Ex='c')
@@ -78,13 +81,15 @@ class OptparseUsageExampleTests(TestCase):
         with self.assertRaises(IncompetentDeveloperError):
             _ = OptparseUsageExample('a', 'b', Ex=None)
 
+
 def oh(key, data, opt_value=None):
     return data * 2
+
 
 class OptparseInterfaceTests(TestCase):
     def setUp(self):
         self.interface = fabulous()
-    
+
     def test_init(self):
         self.assertRaises(IncompetentDeveloperError, OptparseInterface)
 
@@ -99,7 +104,7 @@ class OptparseInterfaceTests(TestCase):
             _ = DuplicateOptionMappings()
 
     def test_input_handler(self):
-        obs = self.interface._input_handler(['--c','foo'])
+        obs = self.interface._input_handler(['--c', 'foo'])
         self.assertEqual(obs.items(), [('c', 'foo')])
 
     def test_build_usage_lines(self):
@@ -107,21 +112,24 @@ class OptparseInterfaceTests(TestCase):
         self.assertEqual(obs, usage_lines)
 
     def test_output_handler(self):
-        results = {'itsaresult':20}
+        results = {'itsaresult': 20}
         obs = self.interface._output_handler(results)
-        self.assertEqual(obs, {'itsaresult':40})
+        self.assertEqual(obs, {'itsaresult': 40})
+
 
 class GeneralTests(TestCase):
     def setUp(self):
+        in_parameter = ghetto.CommandIns['c']
+        out_parameter = ghetto.CommandOuts['itsaresult']
         self.obj = optparse_factory(ghetto,
-                [OptparseUsageExample('a','b','c')],
-                [OptparseOption(Type=str,
-                                Parameter=ghetto.CommandIns['c'],
-                                ShortName='n')],
-                [OptparseResult(Type=str,
-                                Parameter=ghetto.CommandOuts['itsaresult'],
-                                Handler=oh)],
-                '2.0-dev')
+                                    [OptparseUsageExample('a', 'b', 'c')],
+                                    [OptparseOption(Type=str,
+                                                    Parameter=in_parameter,
+                                                    ShortName='n')],
+                                    [OptparseResult(Type=str,
+                                                    Parameter=out_parameter,
+                                                    Handler=oh)],
+                                    '2.0-dev')
 
     def test_optparse_factory(self):
         # exercise it
@@ -131,12 +139,14 @@ class GeneralTests(TestCase):
         # exercise it
         _ = optparse_main(self.obj, ['testing', '--c', 'bar'])
 
+
 class ghetto(Command):
     CommandIns = ParameterCollection([CommandIn('c', str, 'b')])
     CommandOuts = ParameterCollection([CommandOut('itsaresult', str, 'x')])
 
     def run(self, **kwargs):
-        return {'itsaresult':10}
+        return {'itsaresult': 10}
+
 
 class fabulous(OptparseInterface):
     CommandConstructor = ghetto
@@ -147,29 +157,34 @@ class fabulous(OptparseInterface):
                 ShortName='n')]
 
     def _get_usage_examples(self):
-        return [OptparseUsageExample('a','b','c')]
+        return [OptparseUsageExample('a', 'b', 'c')]
 
     def _get_outputs(self):
-        return [OptparseResult(Parameter=ghetto.CommandOuts['itsaresult'], Handler=oh)]
+        return [OptparseResult(Parameter=ghetto.CommandOuts['itsaresult'],
+                               Handler=oh)]
 
     def _get_version(self):
         return '2.0-dev'
+
 
 # Doesn't have any usage examples...
 class NoUsageExamples(fabulous):
     def _get_usage_examples(self):
         return []
 
+
 # More than one option mapping to the same Parameter...
 class DuplicateOptionMappings(fabulous):
     def _get_inputs(self):
         return [
             OptparseOption(Type=str,
-            Parameter=self.CommandConstructor.CommandIns['c'], ShortName='n'),
+                           Parameter=self.CommandConstructor.CommandIns['c'],
+                           ShortName='n'),
 
             OptparseOption(Parameter=self.CommandConstructor.CommandIns['c'],
-            Name='i-am-a-duplicate')
+                           Name='i-am-a-duplicate')
         ]
+
 
 class TypeCheckTests(TestCase):
     def setUp(self):
@@ -189,15 +204,15 @@ class TypeCheckTests(TestCase):
         self.assertEqual(obs, tmp_path)
         # Check that raises an error when the file doesn't exists
         self.assertRaises(OptionValueError, check_existing_filepath, option,
-            '-f', '/hopefully/a/non/existing/file')
+                          '-f', '/hopefully/a/non/existing/file')
         # Check that raises an error when the path exists and is a directory
         tmp_dirpath = mkdtemp()
         self._dirs_to_clean_up = [tmp_dirpath]
         self.assertRaises(OptionValueError, check_existing_filepath, option,
-            '-f', tmp_dirpath)
+                          '-f', tmp_dirpath)
 
     def test_check_existing_filepaths(self):
-        # Check that returns a list with the paths, in the same order as 
+        # Check that returns a list with the paths, in the same order as
         # the input comma separated list
         tmp_f1, tmp_path1 = mkstemp(prefix='pyqi_tmp_')
         tmp_f2, tmp_path2 = mkstemp(prefix='pyqi_tmp_')
@@ -214,17 +229,18 @@ class TypeCheckTests(TestCase):
         self.assertEqual(set(obs), set(exp))
         # Check that raises an error when the wildcard does not match any file
         self.assertRaises(OptionValueError, check_existing_filepaths, option,
-            '-f', '/hopefully/a/non/existing/path*')
+                          '-f', '/hopefully/a/non/existing/path*')
         # Check that raises an error when one of the files does not exist
-        value = ",".join([tmp_path1,tmp_path2,'/hopefully/a/non/existing/file'])
+        value = ",".join([tmp_path1, tmp_path2,
+                         '/hopefully/a/non/existing/file'])
         self.assertRaises(OptionValueError, check_existing_filepaths, option,
-            '-f', value)
+                          '-f', value)
         # Check that raises an error when one of the paths is a folder
         tmp_dirpath = mkdtemp()
         self._dirs_to_clean_up = [tmp_dirpath]
         value = ",".join([tmp_path1, tmp_path2, tmp_dirpath])
         self.assertRaises(OptionValueError, check_existing_filepaths, option,
-            '-f', value)
+                          '-f', value)
 
     def test_check_existing_dirpath(self):
         # Check that returns the correct value when the directory exists
@@ -235,12 +251,12 @@ class TypeCheckTests(TestCase):
         self.assertEqual(obs, tmp_dirpath)
         # Check that raises an error when the folder doesn't exists
         self.assertRaises(OptionValueError, check_existing_dirpath, option,
-            '-f', '/hopefully/a/non/existing/directory')
+                          '-f', '/hopefully/a/non/existing/directory')
         # Check that raises an error when the path exists and is a file
         tmp_f, tmp_path = mkstemp()
         self._paths_to_clean_up = [tmp_path]
         self.assertRaises(OptionValueError, check_existing_dirpath, option,
-            '-f', tmp_path)
+                          '-f', tmp_path)
 
     def test_check_existing_dirpaths(self):
         # Check that returns a list with the paths, in the same order as the
@@ -260,18 +276,18 @@ class TypeCheckTests(TestCase):
         self.assertEqual(set(obs), set(exp))
         # Check that raises an error when the wildcard does not match any path
         self.assertRaises(OptionValueError, check_existing_dirpaths, option,
-            '-f', '/hopefully/a/non/existing/path*')
+                          '-f', '/hopefully/a/non/existing/path*')
         # Check that raises an error when one of the directories does not exist
         value = ",".join([tmp_dirpath1, tmp_dirpath2,
-            '/hopefully/a/non/existing/path*'])
+                         '/hopefully/a/non/existing/path*'])
         self.assertRaises(OptionValueError, check_existing_dirpaths, option,
-            '-f', value)
+                          '-f', value)
         # Check that raises an error when one of the paths is a file
         tmp_f, tmp_path = mkstemp()
         self._paths_to_clean_up = [tmp_path]
         value = ",".join([tmp_dirpath1, tmp_dirpath2, tmp_path])
         self.assertRaises(OptionValueError, check_existing_dirpaths, option,
-            '-f', value)
+                          '-f', value)
 
     def test_check_new_filepath(self):
         # Check that it doesn't raise an error if the path does not exist
@@ -288,7 +304,7 @@ class TypeCheckTests(TestCase):
         tmp_dirpath = mkdtemp()
         self._dirs_to_clean_up = [tmp_dirpath]
         self.assertRaises(OptionValueError, check_new_filepath, option, '-n',
-            tmp_dirpath)
+                          tmp_dirpath)
 
     def test_check_new_dirpath(self):
         # Check that it doesn't raise an error if the path does not exist
@@ -296,7 +312,8 @@ class TypeCheckTests(TestCase):
         exp = '/hopefully/a/non/existing/dir'
         obs = check_new_dirpath(option, '-n', exp)
         self.assertEqual(obs, exp)
-        # Check that it doesn't raise an error if the path exists and is a directory
+        # Check that it doesn't raise an error if the path exists
+        # and is a directory
         tmp_dirpath = mkdtemp()
         self._dirs_to_clean_up = [tmp_dirpath]
         obs = check_new_dirpath(option, '-n', tmp_dirpath)
@@ -305,7 +322,7 @@ class TypeCheckTests(TestCase):
         tmp_f, tmp_path = mkstemp()
         self._paths_to_clean_up = [tmp_path]
         self.assertRaises(OptionValueError, check_new_dirpath, option, '-n',
-            tmp_path)
+                          tmp_path)
 
     def test_check_existing_path(self):
         # Check that it doesn't raise an error if an existing file is passed
@@ -314,14 +331,15 @@ class TypeCheckTests(TestCase):
         self._paths_to_clean_up = [tmp_path]
         obs = check_existing_path(option, '-p', tmp_path)
         self.assertEqual(obs, tmp_path)
-        # Check that it doesn't raise an error if an existing directory is passed
+        # Check that it doesn't raise an error if an existing
+        # directory is passed
         tmp_dirpath = mkdtemp()
         self._dirs_to_clean_up = [tmp_dirpath]
         obs = check_existing_path(option, '-p', tmp_dirpath)
         self.assertEqual(obs, tmp_dirpath)
         # Check that it raises an error if the path doesn't exist
         self.assertRaises(OptionValueError, check_existing_path, option, '-n',
-            '/hopefully/a/non/existing/path')
+                          '/hopefully/a/non/existing/path')
 
     def test_check_new_path(self):
         # Really? Too much work...
@@ -333,21 +351,22 @@ class TypeCheckTests(TestCase):
     def test_check_multiple_choice(self):
         # Check that it doesn't raise an error when the value is in the list
         option = PyqiOption('-m', '--multiple', type="multiple_choice",
-            mchoices=['choice_A', 'choice_B', 'choice_C'])
+                            mchoices=['choice_A', 'choice_B', 'choice_C'])
         exp = ["choice_B"]
         obs = check_multiple_choice(option, '-m', exp[0])
         self.assertEqual(obs, exp)
-        exp = ["choice_B","choice_C"]
+        exp = ["choice_B", "choice_C"]
         obs = check_multiple_choice(option, '-m', ",".join(exp))
         self.assertEqual(obs, exp)
         # Check that it raises an error when the value is not in the list
-        self.assertRaises(OptionValueError, check_multiple_choice, option, '-n',
-            "choice_not_listed")
-        self.assertRaises(OptionValueError, check_multiple_choice, option, '-n',
-            "choice_A,choice_not_listed")
+        self.assertRaises(OptionValueError, check_multiple_choice, option,
+                          '-n', "choice_not_listed")
+        self.assertRaises(OptionValueError, check_multiple_choice, option,
+                          '-n', "choice_A,choice_not_listed")
 
     def test_check_blast_db(self):
-        # Check that it doesn't raise an error when a blastdb-like prefix is passed
+        # Check that it doesn't raise an error when a blastdb-like
+        # prefix is passed
         option = PyqiOption('-b', '--blast_test', type="blast_db")
         tmp_f1, tmp_path1 = mkstemp(prefix='pyqi_tmp_')
         tmp_f2, tmp_path2 = mkstemp(prefix='pyqi_tmp_')
@@ -357,7 +376,7 @@ class TypeCheckTests(TestCase):
         self.assertEqual(obs, exp)
         # Check that raises an error if the base folder does not exist
         self.assertRaises(OptionValueError, check_blast_db, option, '-b',
-            '/hopefully/a/non/existing/path')
+                          '/hopefully/a/non/existing/path')
 
 usage_lines = """usage: %prog [options] {}
 
@@ -366,7 +385,7 @@ usage_lines = """usage: %prog [options] {}
 
 
 
-Example usage: 
+Example usage:
 Print help message and exit
  %prog -h
 
