@@ -52,6 +52,23 @@ class OptparseOptionTests(TestCase):
                                    Name='number', Required=False,
                                    Help='help!!!')
 
+        # Choice OptparseOption without associated parameter
+        self.opt_choice = OptparseOption(Parameter=None, Type='choice',
+                                         Choices=['choice_A', 'choice_B',
+                                                  'choice_C'],
+                                         Handler=None, ShortName='c',
+                                         Name='choice', Required=False,
+                                         Default='choice_A', Help='Help!!')
+
+        # Multiple choice OptparseOption without associated parameter
+        self.opt_mult = OptparseOption(Parameter=None, Type='multiple_choice',
+                                       Choices=['choice_A', 'choice_B',
+                                                'choice_C'],
+                                       Handler=None, ShortName='m',
+                                       Name='mult', Required=False,
+                                       Default=['choice_A', 'choice_B'],
+                                       Help='Help!!!')
+
     def test_init(self):
         self.assertEqual(self.opt1.Type, int)
         self.assertEqual(self.opt1.Help, 'some int')
@@ -60,6 +77,12 @@ class OptparseOptionTests(TestCase):
         self.assertEqual(self.opt1.DefaultDescription, 'forty-two')
         self.assertEqual(self.opt1.ShortName, None)
         self.assertEqual(self.opt1.Required, False)
+        # Test choice type
+        self.assertEqual(self.opt_choice.Type, 'choice')
+        self.assertEqual(self.opt_choice.Help, 'Help!!')
+        self.assertEqual(self.opt_choice.Name, 'choice')
+        self.assertEqual(self.opt_choice.Default, 'choice_A')
+        self.assertEqual(self.opt_choice.ShortName, )
 
     def test_str(self):
         exp = '--number'
